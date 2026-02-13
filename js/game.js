@@ -7,6 +7,7 @@ const Game = (() => {
     let combat = null;
     let shop = null;
     let modal = null;
+    let diceRolling = false;
 
     function start() {
         renderMenu();
@@ -44,7 +45,9 @@ const Game = (() => {
         run.playerHp = Math.min(run.playerHp, run.playerMaxHp);
         combat = Combat.create(run, enemy);
         combat = Combat.startRoll(combat);
+        diceRolling = true;
         renderCombat();
+        setTimeout(() => { diceRolling = false; renderCombat(); }, 1200);
     }
 
     // =========================================================================
@@ -97,7 +100,7 @@ const Game = (() => {
                 : isPlacePhase
                     ? (idx) => { combat = Combat.toggleDieForCard(combat, idx); renderCombat(); }
                     : () => {};
-            return UI.renderDie(d, i, onClick, isSelected);
+            return UI.renderDie(d, i, onClick, isSelected, diceRolling);
         });
 
         return UI.h('div', { className: 'dice-area' },
@@ -175,12 +178,23 @@ const Game = (() => {
     // =========================================================================
     function doReroll() {
         combat = Combat.reroll(combat);
+        diceRolling = true;
         renderCombat();
+        setTimeout(() => { diceRolling = false; renderCombat(); }, 1200);
     }
 
     function doPlayCard() {
-        combat = Combat.playCard(combat);
-        renderCombat();
+        const selectedCardEl = document.querySelector('.card.selected');
+        if (selectedCardEl) {
+            selectedCardEl.classList.add('card-playing');
+            setTimeout(() => {
+                combat = Combat.playCard(combat);
+                renderCombat();
+            }, 400);
+        } else {
+            combat = Combat.playCard(combat);
+            renderCombat();
+        }
     }
 
     function doEndTurn() {
@@ -192,8 +206,12 @@ const Game = (() => {
                 combat = Combat.executeEnemyTurn(combat);
                 if (combat.phase === Combat.PHASE.ROLL) {
                     combat = Combat.startRoll(combat);
+                    diceRolling = true;
+                    renderCombat();
+                    setTimeout(() => { diceRolling = false; renderCombat(); }, 1200);
+                } else {
+                    renderCombat();
                 }
-                renderCombat();
             }, 800);
         }
     }
@@ -242,18 +260,9 @@ const Game = (() => {
             goToShopOrNextCombat();
         }
 
-        const cardEls = cardRewards.map((card, i) => {
-            let cls = `card rarity-${card.rarity}`;
-            return UI.h('div', {
-                className: cls,
-                onClick: () => pickCard(i),
-            },
-                UI.h('span', { className: `rarity-tag ${card.rarity}` }, card.rarity),
-                UI.h('div', { className: 'card-name' }, card.name),
-                UI.h('div', { className: 'card-desc' }, card.description),
-                UI.h('span', { className: 'card-dice-req' }, `${card.diceRequired} dé(s)`)
-            );
-        });
+        const cardEls = cardRewards.map((card, i) =>
+            UI.renderCard(card, i, (idx) => pickCard(idx), false)
+        );
 
         UI.render(
             UI.renderTopBar(run, null),

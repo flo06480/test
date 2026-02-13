@@ -220,59 +220,117 @@ body {
 
 .dice-row {
     display: flex;
-    gap: 12px;
+    gap: 16px;
     margin-bottom: 12px;
     flex-wrap: wrap;
     justify-content: center;
 }
 
 .die {
-    width: 64px;
-    height: 64px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.8em;
-    font-weight: 700;
-    border: 2px solid var(--border);
-    border-radius: 10px;
-    background: var(--bg2);
+    width: 70px;
+    height: 70px;
+    perspective: 300px;
     cursor: pointer;
-    transition: all 0.15s;
     position: relative;
     user-select: none;
 }
 
-.die:hover {
+.die:hover .die-face {
     border-color: var(--accent);
 }
 
-.die.selected {
+.die-cube {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s ease-out;
+}
+
+.die-face {
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    background: var(--bg2);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.face-1 { transform: rotateY(0deg) translateZ(35px); }
+.face-2 { transform: rotateY(90deg) translateZ(35px); }
+.face-3 { transform: rotateX(-90deg) translateZ(35px); }
+.face-4 { transform: rotateX(90deg) translateZ(35px); }
+.face-5 { transform: rotateY(-90deg) translateZ(35px); }
+.face-6 { transform: rotateY(180deg) translateZ(35px); }
+
+.die-cube.show-1 { transform: rotateY(0deg); }
+.die-cube.show-2 { transform: rotateY(-90deg); }
+.die-cube.show-3 { transform: rotateX(90deg); }
+.die-cube.show-4 { transform: rotateX(-90deg); }
+.die-cube.show-5 { transform: rotateY(90deg); }
+.die-cube.show-6 { transform: rotateY(180deg); }
+
+.die-pips {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    width: 52px;
+    height: 52px;
+    padding: 2px;
+}
+
+.pip {
+    width: 11px;
+    height: 11px;
+    background: var(--text);
+    border-radius: 50%;
+    align-self: center;
+    justify-self: center;
+}
+
+.pip-empty {
+    width: 11px;
+    height: 11px;
+}
+
+/* Dice states */
+.die.selected .die-face {
     border-color: var(--accent);
     box-shadow: 0 0 12px rgba(88, 166, 255, 0.4);
-    background: rgba(88, 166, 255, 0.1);
+    background: rgba(88, 166, 255, 0.08);
 }
 
 .die.used {
     opacity: 0.3;
     cursor: not-allowed;
+    pointer-events: none;
 }
 
-.die.cracked {
+.die.cracked .die-face {
     border-color: var(--warning);
-    color: var(--warning);
+}
+.die.cracked .pip {
+    background: var(--warning);
 }
 
-.die.broken {
+.die.broken .die-face {
     border-color: var(--danger);
-    color: var(--danger);
+}
+.die.broken .pip {
+    background: var(--danger);
 }
 
 .die-fatigue {
     position: absolute;
     bottom: -6px;
     right: -6px;
-    font-size: 0.45em;
+    font-size: 0.7em;
+    font-weight: 700;
     background: var(--bg3);
     border: 1px solid var(--border);
     border-radius: 50%;
@@ -282,6 +340,7 @@ body {
     align-items: center;
     justify-content: center;
     color: var(--text-dim);
+    z-index: 2;
 }
 
 .dice-controls {
@@ -314,61 +373,116 @@ body {
 
 .hand-row {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     flex-wrap: wrap;
 }
 
 .card {
-    width: 180px;
-    padding: 12px;
+    width: 200px;
+    padding: 0;
     background: var(--bg2);
     border: 2px solid var(--border);
-    border-radius: 8px;
+    border-radius: 12px;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 0.2s ease;
     position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .card:hover {
     border-color: var(--accent);
-    transform: translateY(-2px);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .card.selected {
     border-color: var(--accent);
-    box-shadow: 0 0 15px rgba(88, 166, 255, 0.3);
+    box-shadow: 0 0 20px rgba(88, 166, 255, 0.4);
+    transform: translateY(-4px);
 }
 
+/* Card header */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px 4px;
+}
+
+.card-type-badge {
+    font-size: 0.65em;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.card-type-badge.attack { color: var(--danger); }
+.card-type-badge.defense { color: var(--accent); }
+.card-type-badge.heal { color: var(--accent2); }
+.card-type-badge.drain { color: var(--legendary); }
+.card-type-badge.hybrid { color: var(--warning); }
+.card-type-badge.fortify { color: var(--accent2); }
+.card-type-badge.utility { color: var(--text-dim); }
+
+/* Card icon (emoji) */
+.card-icon {
+    text-align: center;
+    font-size: 2.2em;
+    padding: 6px 0;
+    line-height: 1;
+}
+
+/* Card name */
 .card .card-name {
-    font-weight: 600;
-    font-size: 0.95em;
-    margin-bottom: 4px;
+    font-weight: 700;
+    font-size: 1.05em;
+    text-align: center;
+    padding: 0 10px 4px;
+    margin-bottom: 0;
 }
 
+/* Card description */
 .card .card-desc {
     font-size: 0.78em;
     color: var(--text-dim);
-    line-height: 1.3;
+    line-height: 1.4;
+    text-align: center;
+    padding: 0 10px 8px;
+    flex-grow: 1;
 }
 
+/* Dice requirement (bottom) */
 .card .card-dice-req {
-    display: inline-block;
-    margin-top: 6px;
-    font-size: 0.75em;
-    padding: 2px 8px;
-    background: var(--bg3);
-    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 10px 10px;
+    font-size: 0.8em;
     color: var(--text-dim);
+    border-top: 1px solid var(--border);
+    margin-top: auto;
 }
 
-.card.rarity-common { border-left: 3px solid var(--common); }
-.card.rarity-rare { border-left: 3px solid var(--rare); }
-.card.rarity-legendary { border-left: 3px solid var(--legendary); }
+.card-dice-icon {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    background: var(--text-dim);
+    border-radius: 3px;
+}
 
+.card-dice-text {
+    margin-left: 2px;
+}
+
+/* Rarity tag */
 .card .rarity-tag {
-    position: absolute;
-    top: 6px;
-    right: 6px;
     font-size: 0.65em;
     text-transform: uppercase;
     font-weight: 700;
@@ -378,6 +492,56 @@ body {
 .rarity-tag.common { color: var(--common); }
 .rarity-tag.rare { color: var(--rare); }
 .rarity-tag.legendary { color: var(--legendary); }
+
+/* Rarity visual styles */
+.card.rarity-common {
+    border-color: var(--border);
+}
+
+.card.rarity-rare {
+    border-color: rgba(88, 166, 255, 0.4);
+}
+.card.rarity-rare .card-header {
+    background: linear-gradient(180deg, rgba(88, 166, 255, 0.08) 0%, transparent 100%);
+}
+
+.card.rarity-legendary {
+    border-color: rgba(163, 113, 247, 0.6);
+    background: linear-gradient(135deg, var(--bg2) 0%, rgba(163, 113, 247, 0.05) 100%);
+}
+.card.rarity-legendary .card-header {
+    background: linear-gradient(180deg, rgba(163, 113, 247, 0.12) 0%, transparent 100%);
+}
+
+/* Legendary shimmer overlay */
+.card-shimmer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 40px;
+    height: 200%;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(163, 113, 247, 0.15) 45%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(163, 113, 247, 0.15) 55%,
+        transparent 100%
+    );
+    animation: shimmer 3s infinite;
+    pointer-events: none;
+}
+
+/* Legendary glow pulse */
+.card.rarity-legendary {
+    animation: legendaryGlow 2s ease-in-out infinite;
+}
+
+/* Card play animation */
+.card.card-playing {
+    animation: cardPlay 0.4s ease-in forwards;
+    pointer-events: none;
+}
 
 /* ---- Log ---- */
 .combat-log {
@@ -552,18 +716,53 @@ body {
 }
 
 /* ---- Animations ---- */
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20% { transform: translateX(-4px); }
-    40% { transform: translateX(4px); }
-    60% { transform: translateX(-3px); }
-    80% { transform: translateX(3px); }
+
+/* Dice 3D roll */
+@keyframes diceRoll {
+    0%   { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+    20%  { transform: rotateX(300deg) rotateY(200deg) rotateZ(100deg); }
+    45%  { transform: rotateX(600deg) rotateY(100deg) rotateZ(200deg); }
+    70%  { transform: rotateX(900deg) rotateY(400deg) rotateZ(50deg); }
+    100% { transform: rotateX(720deg) rotateY(360deg) rotateZ(0deg); }
 }
 
-.die.rolling {
-    animation: shake 0.3s ease-in-out;
+.die-cube.rolling {
+    animation: diceRoll 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
+/* Dice bounce on landing */
+@keyframes dieBounce {
+    0%   { transform: translateY(0); }
+    30%  { transform: translateY(-10px); }
+    50%  { transform: translateY(0); }
+    70%  { transform: translateY(-4px); }
+    100% { transform: translateY(0); }
+}
+
+.die.bouncing {
+    animation: dieBounce 0.4s ease-out 0.8s;
+}
+
+/* Card shimmer (legendary) */
+@keyframes shimmer {
+    0%   { transform: translateX(-100%) rotate(25deg); }
+    100% { transform: translateX(400%) rotate(25deg); }
+}
+
+/* Legendary glow pulse */
+@keyframes legendaryGlow {
+    0%, 100% { box-shadow: 0 0 8px rgba(163, 113, 247, 0.3), inset 0 0 8px rgba(163, 113, 247, 0.05); }
+    50%      { box-shadow: 0 0 16px rgba(163, 113, 247, 0.5), inset 0 0 12px rgba(163, 113, 247, 0.1); }
+}
+
+/* Card play */
+@keyframes cardPlay {
+    0%   { transform: translateY(0) scale(1); opacity: 1; }
+    50%  { transform: translateY(-30px) scale(1.1); opacity: 0.8; }
+    100% { transform: translateY(-60px) scale(0.5); opacity: 0; }
+}
+
+/* Fade in */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
@@ -575,7 +774,18 @@ body {
 
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
-    .die { width: 52px; height: 52px; font-size: 1.4em; }
-    .card { width: 155px; }
+    .die { width: 56px; height: 56px; }
+    .die-face { width: 56px; height: 56px; }
+    .face-1 { transform: rotateY(0deg) translateZ(28px); }
+    .face-2 { transform: rotateY(90deg) translateZ(28px); }
+    .face-3 { transform: rotateX(-90deg) translateZ(28px); }
+    .face-4 { transform: rotateX(90deg) translateZ(28px); }
+    .face-5 { transform: rotateY(-90deg) translateZ(28px); }
+    .face-6 { transform: rotateY(180deg) translateZ(28px); }
+    .die-pips { width: 42px; height: 42px; }
+    .pip, .pip-empty { width: 9px; height: 9px; }
+    .card { width: 170px; }
+    .card-icon { font-size: 1.8em; }
+    .card .card-name { font-size: 0.95em; }
     .menu-screen h1 { font-size: 2em; }
 }

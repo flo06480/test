@@ -98,36 +98,104 @@ const UI = (() => {
         );
     }
 
-    function renderDie(die, index, onClick, isSelected) {
+    // ---- Dice pip patterns (3x3 grid, row-major) ----
+    const PIP_PATTERNS = {
+        1: [0,0,0, 0,1,0, 0,0,0],
+        2: [0,0,1, 0,0,0, 1,0,0],
+        3: [0,0,1, 0,1,0, 1,0,0],
+        4: [1,0,1, 0,0,0, 1,0,1],
+        5: [1,0,1, 0,1,0, 1,0,1],
+        6: [1,0,1, 1,0,1, 1,0,1],
+    };
+
+    function renderDieFace(value) {
+        const pattern = PIP_PATTERNS[value] || PIP_PATTERNS[1];
+        const cells = pattern.map(hasPip =>
+            h('span', { className: hasPip ? 'pip' : 'pip-empty' })
+        );
+        return h('div', { className: 'die-pips' }, ...cells);
+    }
+
+    function renderDie(die, index, onClick, isSelected, rolling) {
         let cls = 'die';
         if (die.used) cls += ' used';
         else if (isSelected) cls += ' selected';
         if (die.state === 'cracked') cls += ' cracked';
         if (die.state === 'broken') cls += ' broken';
+        if (rolling) cls += ' bouncing';
+
+        const faces = [];
+        for (let v = 1; v <= 6; v++) {
+            faces.push(h('div', { className: `die-face face-${v}` }, renderDieFace(v)));
+        }
+
+        let cubeClass = `die-cube show-${die.value}`;
+        if (rolling) cubeClass += ' rolling';
+
+        const staggerStyle = rolling ? { animationDelay: `${index * 0.12}s` } : {};
 
         return h('div', {
             className: cls,
             onClick: die.used ? null : () => onClick(index),
         },
-            String(die.value),
+            h('div', { className: cubeClass, style: staggerStyle }, ...faces),
             die.fatigue > 0
                 ? h('span', { className: 'die-fatigue' }, String(die.fatigue))
                 : null
         );
     }
 
+    // ---- Card type classification ----
+    function getCardMeta(card) {
+        const desc = (card.description || '').toLowerCase();
+        const hasDamage = card.computeDamage && card.computeDamage([3, 3, 3, 3, 3]) > 0;
+        const hasHeal = desc.includes('soin');
+        const hasArmor = desc.includes('armure');
+
+        if (hasHeal && hasDamage) return { type: 'drain', icon: '\u{1F480}', label: 'Drain' };
+        if (hasHeal && hasArmor) return { type: 'fortify', icon: '\u{1F3F0}', label: 'Bastion' };
+        if (hasHeal) return { type: 'heal', icon: '\u{1F49A}', label: 'Soin' };
+        if (hasArmor && hasDamage) return { type: 'hybrid', icon: '\u{2694}\uFE0F', label: 'Hybride' };
+        if (hasArmor) return { type: 'defense', icon: '\u{1F6E1}\uFE0F', label: 'D\u00e9fense' };
+        if (hasDamage) return { type: 'attack', icon: '\u{2694}\uFE0F', label: 'Attaque' };
+        return { type: 'utility', icon: '\u2728', label: 'Utilitaire' };
+    }
+
     function renderCard(card, index, onClick, isSelected) {
-        let cls = `card rarity-${card.rarity}`;
+        const meta = getCardMeta(card);
+        let cls = `card rarity-${card.rarity} card-type-${meta.type}`;
         if (isSelected) cls += ' selected';
+
+        // Dice requirement icons
+        const diceIcons = [];
+        for (let i = 0; i < card.diceRequired; i++) {
+            diceIcons.push(h('span', { className: 'card-dice-icon' }));
+        }
 
         return h('div', {
             className: cls,
             onClick: () => onClick(index),
         },
-            h('span', { className: `rarity-tag ${card.rarity}` }, card.rarity),
+            // Header: type badge + rarity
+            h('div', { className: 'card-header' },
+                h('span', { className: `card-type-badge ${meta.type}` }, meta.label),
+                h('span', { className: `rarity-tag ${card.rarity}` }, card.rarity)
+            ),
+            // Icon
+            h('div', { className: 'card-icon' }, meta.icon),
+            // Name
             h('div', { className: 'card-name' }, card.name),
+            // Description
             h('div', { className: 'card-desc' }, card.description),
-            h('span', { className: 'card-dice-req' }, `${card.diceRequired} dé(s)`)
+            // Dice requirement
+            h('div', { className: 'card-dice-req' },
+                ...diceIcons,
+                h('span', { className: 'card-dice-text' }, ` ${card.diceRequired} d\u00e9(s)`)
+            ),
+            // Legendary shimmer
+            card.rarity === 'legendary'
+                ? h('div', { className: 'card-shimmer' })
+                : null
         );
     }
 
@@ -139,5 +207,5 @@ const UI = (() => {
         return el;
     }
 
-    return { h, clear, render, hpBar, renderTopBar, renderEnemyPanel, renderDie, renderCard, renderLog };
+    return { h, clear, render, hpBar, renderTopBar, renderEnemyPanel, renderDie, renderCard, renderLog, getCardMeta };
 })();
