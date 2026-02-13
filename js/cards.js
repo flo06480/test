@@ -158,6 +158,19 @@ const Cards = (() => {
             effect: null,
         },
 
+        {
+            id: 'healing_pair',
+            name: 'Paire Curative',
+            description: 'Paire (2 identiques). Soin = somme × 2.',
+            rarity: 'common',
+            diceRequired: 2,
+            validate: (vals) => hasPair(vals),
+            computeDamage: (_vals) => 0,
+            effect: (vals, combat) => {
+                combat.playerHp = Math.min(combat.playerMaxHp, combat.playerHp + sumOf(vals) * 2);
+            },
+        },
+
         // --- RARE ---
         {
             id: 'royal_duo',
@@ -251,6 +264,53 @@ const Cards = (() => {
             computeDamage: (vals) => sumOf(vals) * 3,
             effect: null,
         },
+        {
+            id: 'armored_triple',
+            name: 'Brelan Blindé',
+            description: 'Brelan (3 identiques). Dégâts = 15. Armure = somme × 3.',
+            rarity: 'rare',
+            diceRequired: 3,
+            validate: (vals) => hasTriple(vals),
+            computeDamage: (_vals) => 15,
+            effect: (vals, combat) => { combat.playerArmor += sumOf(vals) * 3; },
+        },
+        {
+            id: 'vampiric_triple',
+            name: 'Brelan Vampirique',
+            description: 'Brelan (3 identiques). Dégâts = somme × 3. Soin = somme.',
+            rarity: 'rare',
+            diceRequired: 3,
+            validate: (vals) => hasTriple(vals),
+            computeDamage: (vals) => sumOf(vals) * 3,
+            effect: (vals, combat) => {
+                combat.playerHp = Math.min(combat.playerMaxHp, combat.playerHp + sumOf(vals));
+            },
+        },
+        {
+            id: 'double_pair_heal',
+            name: 'Double Paire Curative',
+            description: 'Double Paire (4 dés, 2 paires). Dégâts = somme × 2. Soin = somme.',
+            rarity: 'rare',
+            diceRequired: 4,
+            validate: (vals) => hasDoublePair(vals),
+            computeDamage: (vals) => sumOf(vals) * 2,
+            effect: (vals, combat) => {
+                combat.playerHp = Math.min(combat.playerMaxHp, combat.playerHp + sumOf(vals));
+            },
+        },
+        {
+            id: 'full_shield',
+            name: 'Full Défensif',
+            description: 'Full (brelan + paire). Armure = somme × 4. Soin = 10.',
+            rarity: 'rare',
+            diceRequired: 5,
+            validate: (vals) => hasFull(vals),
+            computeDamage: (_vals) => 0,
+            effect: (vals, combat) => {
+                combat.playerArmor += sumOf(vals) * 4;
+                combat.playerHp = Math.min(combat.playerMaxHp, combat.playerHp + 10);
+            },
+        },
 
         // --- LEGENDARY ---
         {
@@ -316,6 +376,49 @@ const Cards = (() => {
             computeDamage: (_vals) => 60,
             effect: (_vals, combat) => {
                 combat.playerHp = Math.min(combat.playerMaxHp, combat.playerHp + 20);
+            },
+        },
+        {
+            id: 'devastating_quad',
+            name: 'Carré Dévastateur',
+            description: 'Carré (4 identiques). Dégâts = somme × 8.',
+            rarity: 'legendary',
+            diceRequired: 4,
+            validate: (vals) => hasQuad(vals),
+            computeDamage: (vals) => sumOf(vals) * 8,
+            effect: null,
+        },
+        {
+            id: 'armored_full',
+            name: 'Full Blindé',
+            description: 'Full (brelan + paire). Dégâts = somme × 3. Armure = somme × 3.',
+            rarity: 'legendary',
+            diceRequired: 5,
+            validate: (vals) => hasFull(vals),
+            computeDamage: (vals) => sumOf(vals) * 3,
+            effect: (vals, combat) => { combat.playerArmor += sumOf(vals) * 3; },
+        },
+        {
+            id: 'supreme_triple',
+            name: 'Brelan Suprême',
+            description: 'Brelan de valeur ≥ 4. Dégâts = 85.',
+            rarity: 'legendary',
+            diceRequired: 3,
+            validate: (vals) => hasTriple(vals) && vals.every(v => v >= 4),
+            computeDamage: (_vals) => 85,
+            effect: null,
+        },
+        {
+            id: 'quad_fortress',
+            name: 'Forteresse Carrée',
+            description: 'Carré (4 identiques). Armure = somme × 6. Soin = 15.',
+            rarity: 'legendary',
+            diceRequired: 4,
+            validate: (vals) => hasQuad(vals),
+            computeDamage: (_vals) => 0,
+            effect: (vals, combat) => {
+                combat.playerArmor += sumOf(vals) * 6;
+                combat.playerHp = Math.min(combat.playerMaxHp, combat.playerHp + 15);
             },
         },
     ];
