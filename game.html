@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eden Défense - Tactical Rogue-Lite</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a2e; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+
+  #start-screen {
+    position: fixed; inset: 0; background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100;
+  }
+  #start-screen h1 { font-size: 3em; color: #ffd700; text-shadow: 0 0 20px #ffa500; margin-bottom: 0.3em; }
+  #start-screen p.subtitle { color: #aaa; margin-bottom: 3em; font-size: 1.1em; }
+  .god-btn {
+    width: 340px; padding: 24px 32px; margin: 12px; border: none; border-radius: 16px; cursor: pointer;
+    font-size: 1.2em; font-weight: bold; transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .god-btn:hover { transform: scale(1.04); }
+  #btn-god { background: linear-gradient(135deg, #4facfe, #00f2fe); color: #001; box-shadow: 0 0 24px #4facfe88; }
+  #btn-zeus { background: linear-gradient(135deg, #f7971e, #ffd200); color: #111; box-shadow: 0 0 24px #ffd20088; }
+  .god-btn .btn-title { font-size: 1.3em; display: block; margin-bottom: 8px; }
+  .god-btn .btn-desc { font-size: 0.8em; font-weight: normal; opacity: 0.85; }
+
+  #game-screen { display: none; flex: 1; flex-direction: column; height: 100vh; }
+
+  #top-bar {
+    background: #16213e; padding: 8px 20px; display: flex; align-items: center; gap: 20px;
+    border-bottom: 2px solid #0f3460; font-size: 0.95em;
+  }
+  .stat-badge { background: #0f3460; border-radius: 8px; padding: 4px 12px; color: #7ec8e3; font-weight: bold; }
+  .stat-badge span { color: #fff; }
+
+  #main-area { display: flex; flex: 1; overflow: hidden; }
+
+  #grid-container {
+    display: flex; align-items: center; justify-content: center; flex: 1; padding: 12px;
+    position: relative;
+  }
+
+  #grid {
+    display: grid; grid-template-columns: repeat(9, 62px); grid-template-rows: repeat(9, 62px);
+    gap: 2px; background: #0a0a1a; border: 3px solid #0f3460; border-radius: 4px;
+  }
+
+  .cell {
+    width: 62px; height: 62px; border-radius: 4px; cursor: pointer; position: relative;
+    display: flex; align-items: center; justify-content: center; font-size: 1.4em;
+    transition: filter 0.1s; user-select: none;
+    background: #1a3a1a;
+  }
+  .cell:hover { filter: brightness(1.3); }
+  .cell.empty { background: #1e3a1e; }
+  .cell.adam { background: #1a3a8f; border: 2px solid #4f8fff; }
+  .cell.eve { background: #8f1a5a; border: 2px solid #ff6eb4; }
+  .cell.wall { background: #6b4423; border: 2px solid #a0673a; }
+  .cell.selected-target { outline: 3px solid #ffd700; outline-offset: -3px; filter: brightness(1.4); }
+  .cell.valid-target { outline: 2px solid #7fff7f; outline-offset: -2px; }
+  .cell.shielded { background: #1a3a8f; box-shadow: 0 0 12px #4f8fffaa inset; }
+
+  .cell .hp-label {
+    position: absolute; bottom: 2px; right: 4px; font-size: 0.55em; font-weight: bold;
+    color: #fff; text-shadow: 0 0 3px #000; pointer-events: none;
+  }
+  .cell .arrow-label {
+    position: absolute; top: 2px; left: 4px; font-size: 0.7em; opacity: 0.7; pointer-events: none;
+  }
+
+  .dmg-popup {
+    position: absolute; font-weight: bold; font-size: 1.1em; color: #ff4444;
+    text-shadow: 0 0 6px #000; pointer-events: none; z-index: 50;
+    animation: popUp 0.9s ease-out forwards;
+  }
+  @keyframes popUp {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-36px); }
+  }
+
+  #side-panel {
+    width: 180px; background: #16213e; border-left: 2px solid #0f3460;
+    padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto;
+  }
+  .panel-section { background: #0f3460; border-radius: 10px; padding: 10px; }
+  .panel-label { font-size: 0.75em; color: #7ec8e3; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+
+  .energy-pips { display: flex; gap: 5px; flex-wrap: wrap; }
+  .pip {
+    width: 22px; height: 22px; border-radius: 50%; background: #444; border: 2px solid #666;
+    transition: background 0.2s;
+  }
+  .pip.active { background: #ffd700; border-color: #ffaa00; box-shadow: 0 0 6px #ffd700; }
+
+  #fureur-section { display: none; }
+  #fureur-bar-bg {
+    height: 14px; background: #333; border-radius: 7px; overflow: hidden; margin-top: 4px;
+  }
+  #fureur-bar { height: 100%; background: linear-gradient(90deg, #f7971e, #ffd200); transition: width 0.3s; }
+
+  #deck-info { font-size: 0.9em; color: #ccc; }
+
+  #bottom-area {
+    background: #16213e; border-top: 2px solid #0f3460; padding: 10px 14px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  #hand-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+
+  .card {
+    width: 100px; min-height: 130px; border-radius: 12px; padding: 10px 8px;
+    cursor: pointer; border: 2px solid #444; background: linear-gradient(160deg, #2a2a4a, #1a1a3a);
+    display: flex; flex-direction: column; transition: transform 0.15s, box-shadow 0.15s;
+    position: relative; user-select: none;
+  }
+  .card:hover { transform: translateY(-6px); box-shadow: 0 8px 20px #0008; }
+  .card.selected { border-color: #ffd700; box-shadow: 0 0 14px #ffd700aa; transform: translateY(-8px); }
+  .card.unaffordable { opacity: 0.45; cursor: not-allowed; }
+  .card-name { font-size: 0.8em; font-weight: bold; color: #eee; text-align: center; margin-bottom: 4px; }
+  .card-cost {
+    position: absolute; top: 6px; right: 8px; background: #ffd700; color: #111;
+    border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center;
+    justify-content: center; font-size: 0.75em; font-weight: bold;
+  }
+  .card-icon { text-align: center; font-size: 1.8em; margin: 6px 0; }
+  .card-desc { font-size: 0.68em; color: #aaa; text-align: center; line-height: 1.3; }
+
+  #card-info { color: #aaa; font-size: 0.85em; min-height: 1.5em; }
+
+  #btn-end-turn {
+    padding: 10px 28px; background: linear-gradient(135deg, #e94560, #c62a47);
+    border: none; border-radius: 10px; color: white; font-size: 1em; font-weight: bold;
+    cursor: pointer; transition: transform 0.1s, box-shadow 0.1s;
+    box-shadow: 0 4px 12px #e9456044;
+  }
+  #btn-end-turn:hover { transform: scale(1.05); box-shadow: 0 6px 18px #e9456066; }
+  #btn-end-turn:active { transform: scale(0.97); }
+
+  #action-log {
+    background: #0a0f1a; border-radius: 8px; padding: 8px 10px;
+    font-size: 0.72em; color: #888; max-height: 80px; overflow-y: auto;
+    border: 1px solid #1a2a4a; line-height: 1.6;
+  }
+  #action-log .log-line { color: #9ab; }
+  #action-log .log-line.dmg { color: #f88; }
+  #action-log .log-line.info { color: #8cf; }
+
+  #overlay {
+    position: fixed; inset: 0; background: #000b; display: none;
+    align-items: center; justify-content: center; z-index: 200;
+  }
+  #overlay-box {
+    background: linear-gradient(135deg, #16213e, #0f3460);
+    border: 2px solid #4facfe; border-radius: 20px; padding: 36px 40px;
+    text-align: center; max-width: 500px; width: 90%;
+  }
+  #overlay-box h2 { font-size: 2em; margin-bottom: 12px; }
+  #overlay-box p { color: #aaa; margin-bottom: 24px; font-size: 1em; }
+  .reward-cards { display: flex; gap: 16px; justify-content: center; margin-bottom: 24px; flex-wrap: wrap; }
+  .reward-card {
+    background: #1a1a3a; border: 2px solid #444; border-radius: 12px; padding: 16px 14px;
+    cursor: pointer; width: 130px; transition: border-color 0.2s, transform 0.15s;
+    text-align: center;
+  }
+  .reward-card:hover { border-color: #ffd700; transform: scale(1.05); }
+  .reward-card .r-icon { font-size: 2em; }
+  .reward-card .r-name { font-size: 0.9em; font-weight: bold; color: #eee; margin: 6px 0 4px; }
+  .reward-card .r-desc { font-size: 0.72em; color: #aaa; line-height: 1.3; }
+  .overlay-btn {
+    padding: 10px 28px; border: none; border-radius: 10px; font-size: 1em; font-weight: bold;
+    cursor: pointer; margin: 6px;
+  }
+  #btn-restart { background: #4facfe; color: #001; }
+  #btn-skip-reward { background: #555; color: #eee; }
+
+  .zeus-badge { background: linear-gradient(90deg,#f7971e,#ffd200); color:#111; border-radius:8px; padding:2px 10px; font-size:0.8em; font-weight:bold; }
+  .god-badge { background: linear-gradient(90deg,#4facfe,#00f2fe); color:#001; border-radius:8px; padding:2px 10px; font-size:0.8em; font-weight:bold; }
+</style>
+</head>
+<body>
+
+<!-- START SCREEN -->
+<div id="start-screen">
+  <h1>⚡ EDEN DÉFENSE ⚡</h1>
+  <p class="subtitle">Protège Adam & Ève des hordes ennemies</p>
+  <button class="god-btn" id="btn-god">
+    <span class="btn-title">🌿 Jouer en tant que DIEU</span>
+    <span class="btn-desc">Vision Divine : vois le prochain mouvement des ennemis.<br>Stratégie pure, contrôle maximal.<br>Cartes : Frappe, Frappe 3x3, Pousse, Mur, Bouclier</span>
+  </button>
+  <button class="god-btn" id="btn-zeus">
+    <span class="btn-title">⚡ Jouer en tant que ZEUS</span>
+    <span class="btn-desc">Fureur croissante = sorts boostés.<br>Éclair Divin automatique chaque tour.<br>Cartes : Frappe, Frappe 3x3, Foudre de Zeus, Pousse, Bouclier</span>
+  </button>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen">
+  <div id="top-bar">
+    <div id="god-badge-area"></div>
+    <div class="stat-badge">Vague <span id="wave-num">1</span></div>
+    <div class="stat-badge">Tour <span id="turn-num">1</span></div>
+    <div class="stat-badge">Ennemis <span id="enemy-count">0</span></div>
+    <div id="status-msg" style="color:#ffd700;font-weight:bold;margin-left:auto;"></div>
+  </div>
+  <div id="main-area">
+    <div id="grid-container">
+      <div id="grid"></div>
+    </div>
+    <div id="side-panel">
+      <div class="panel-section">
+        <div class="panel-label">Énergie</div>
+        <div class="energy-pips" id="energy-pips"></div>
+        <div style="font-size:0.8em;color:#aaa;margin-top:4px;"><span id="energy-val">3</span>/3</div>
+      </div>
+      <div class="panel-section" id="fureur-section">
+        <div class="panel-label">Fureur ⚡</div>
+        <div id="fureur-bar-bg"><div id="fureur-bar" style="width:0%"></div></div>
+        <div style="font-size:0.8em;color:#aaa;margin-top:4px;"><span id="fureur-val">0</span>/10</div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-label">Deck / Défausse</div>
+        <div id="deck-info">Deck: <span id="deck-count">0</span><br>Défausse: <span id="discard-count">0</span></div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-label">Légende</div>
+        <div style="font-size:0.72em;line-height:1.9;color:#aaa;">
+          🔵 Adam &nbsp; 🌸 Ève<br>
+          🔴 Grunt &nbsp; 🟠 Serpent<br>
+          🟣 Volant<br>
+          🟫 Mur &nbsp; 🛡 Bouclier
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="bottom-area">
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      <div style="flex:1;">
+        <div id="hand-row"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;align-items:center;">
+        <div id="card-info">Sélectionne une carte</div>
+        <button id="btn-end-turn">Fin de Tour ⏭</button>
+      </div>
+    </div>
+    <div id="action-log"></div>
+  </div>
+</div>
+
+<!-- OVERLAY -->
+<div id="overlay">
+  <div id="overlay-box">
+    <h2 id="overlay-title"></h2>
+    <p id="overlay-msg"></p>
+    <div id="reward-area"></div>
+    <div id="overlay-btns"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ===================== CARD DEFINITIONS =====================
+
+class Card {
+  constructor(name, cost, icon, desc, targetType) {
+    this.name = name;
+    this.cost = cost;
+    this.icon = icon;
+    this.desc = desc;
+    // 'cell', 'enemy', 'empty', 'instant'
+    this.targetType = targetType || 'instant';
+    this.id = Math.random().toString(36).slice(2);
+  }
+  clone() {
+    const c = new this.constructor();
+    c.id = Math.random().toString(36).slice(2);
+    return c;
+  }
+  apply(game, row, col) { /* override */ }
+}
+
+class CardFrappe extends Card {
+  constructor() {
+    super('Frappe', 1, '👊', 'Inflige 2 dégâts à un ennemi.', 'enemy');
+  }
+  apply(game, row, col) {
+    const enemy = game.grid.getEnemy(row, col);
+    if (!enemy) { game.log('Pas d\'ennemi ici!', 'info'); return false; }
+    const bonus = game.mode === 'zeus' && game.fureur >= 5 ? 1 : 0;
+    game.damageEnemy(enemy, 2 + bonus, row, col);
+    if (bonus) game.log('⚡ Fureur: +1 dégât bonus!', 'info');
+    // Zeus high fureur: hit adjacents too
+    if (game.mode === 'zeus' && game.fureur >= 8) {
+      const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+      for (const [dr,dc] of dirs) {
+        const r2=row+dr, c2=col+dc;
+        const e2 = game.grid.getEnemy(r2,c2);
+        if (e2) { game.damageEnemy(e2, 1, r2, c2); game.log('⚡ Éclair en chaîne!', 'dmg'); }
+      }
+    }
+    return true;
+  }
+}
+
+class CardFrappe3x3 extends Card {
+  constructor() {
+    super('Frappe 3x3', 2, '💥', 'Inflige 1 dégât à tous les ennemis dans une zone 3x3.', 'cell');
+  }
+  apply(game, row, col) {
+    let hit = 0;
+    for (let dr=-1;dr<=1;dr++) for (let dc=-1;dc<=1;dc++) {
+      const r2=row+dr, c2=col+dc;
+      const enemy = game.grid.getEnemy(r2,c2);
+      if (enemy) { game.damageEnemy(enemy,1,r2,c2); hit++; }
+    }
+    game.log(`Frappe 3x3: ${hit} ennemi(s) touché(s).`, hit>0?'dmg':'info');
+    return true;
+  }
+}
+
+class CardPousse extends Card {
+  constructor() {
+    super('Pousse', 1, '🌪', 'Repousse un ennemi de 2 cases depuis le centre.', 'enemy');
+  }
+  apply(game, row, col) {
+    const enemy = game.grid.getEnemy(row, col);
+    if (!enemy) { game.log('Pas d\'ennemi ici!', 'info'); return false; }
+    const cx=4, cy=4;
+    const dr = row-cx, dc = col-cy;
+    const mag = Math.max(1, Math.abs(dr)+Math.abs(dc));
+    const nr = Math.max(0,Math.min(8, row + Math.round(dr/mag*2)));
+    const nc = Math.max(0,Math.min(8, col + Math.round(dc/mag*2)));
+    // Try to move there
+    if (game.grid.cells[nr][nc].type === 'empty') {
+      game.grid.moveEntity(row, col, nr, nc);
+      enemy.row=nr; enemy.col=nc;
+      game.log(`Pousse: ennemi repoussé vers (${nr},${nc}).`, 'info');
+    } else {
+      game.log('Pousse bloquée!', 'info');
+    }
+    return true;
+  }
+}
+
+class CardMur extends Card {
+  constructor() {
+    super('Mur', 2, '🧱', 'Place un mur pendant 3 tours.', 'empty');
+  }
+  apply(game, row, col) {
+    if (game.grid.cells[row][col].type !== 'empty') { game.log('Cellule non vide!', 'info'); return false; }
+    game.grid.cells[row][col].type = 'wall';
+    game.grid.cells[row][col].wallTurns = 3;
+    game.log(`Mur placé en (${row},${col}) pour 3 tours.`, 'info');
+    return true;
+  }
+}
+
+class CardBouclier extends Card {
+  constructor() {
+    super('Bouclier', 2, '🛡', 'Bouclier autour d\'Adam & Ève pendant 1 tour.', 'instant');
+  }
+  apply(game) {
+    game.shieldActive = 1;
+    game.log('Bouclier activé pour 1 tour!', 'info');
+    return true;
+  }
+}
+
+class CardFoudreZeus extends Card {
+  constructor() {
+    super('Foudre de Zeus', 1, '⚡', 'Frappe 1-3 cellules aléatoires pour 3 dégâts chacune.', 'instant');
+  }
+  apply(game) {
+    const hits = 1 + Math.floor(Math.random()*3);
+    let totalDmg = 0;
+    for (let i=0;i<hits;i++) {
+      const row = Math.floor(Math.random()*9);
+      const col = Math.floor(Math.random()*9);
+      const enemy = game.grid.getEnemy(row, col);
+      if (enemy) { game.damageEnemy(enemy, 3, row, col); totalDmg++; }
+      // chance to hit adjacent
+      if (Math.random() < 0.4) {
+        const dirs=[[-1,0],[1,0],[0,-1],[0,1]];
+        for (const [dr,dc] of dirs) {
+          const r2=row+dr,c2=col+dc;
+          if (r2>=0&&r2<9&&c2>=0&&c2<9) {
+            const e2=game.grid.getEnemy(r2,c2);
+            if (e2) { game.damageEnemy(e2,1,r2,c2); totalDmg++; }
+          }
+        }
+      }
+      game.spawnDmgPopup(row, col, '⚡3');
+    }
+    game.log(`Foudre de Zeus: ${hits} éclairs, ${totalDmg} ennemi(s) frappé(s)!`, 'dmg');
+    return true;
+  }
+}
+
+// ===================== ENEMY CLASSES =====================
+
+class Enemy {
+  constructor(row, col, hp, speed, type, symbol, color) {
+    this.row=row; this.col=col; this.hp=hp; this.maxHp=hp;
+    this.speed=speed; this.type=type; this.symbol=symbol; this.color=color;
+    this.id=Math.random().toString(36).slice(2);
+    this.zigzag=0;
+  }
+  getNextMove(grid) {
+    // Move toward nearest of Adam(4,4) or Eve(4,5)
+    const targets = [{r:4,c:4},{r:4,c:5}];
+    let best = null, bestDist = Infinity;
+    for (const t of targets) {
+      const d = Math.abs(this.row-t.r)+Math.abs(this.col-t.c);
+      if (d < bestDist) { bestDist=d; best=t; }
+    }
+    return this._moveToward(best.r, best.c, grid);
+  }
+  _moveToward(tr, tc, grid) {
+    const dr = tr - this.row, dc = tc - this.col;
+    const steps = [];
+    if (Math.abs(dr) >= Math.abs(dc)) {
+      if (dr!==0) steps.push([Math.sign(dr),0]);
+      if (dc!==0) steps.push([0,Math.sign(dc)]);
+    } else {
+      if (dc!==0) steps.push([0,Math.sign(dc)]);
+      if (dr!==0) steps.push([Math.sign(dr),0]);
+    }
+    for (const [sr,sc] of steps) {
+      const nr=this.row+sr, nc=this.col+sc;
+      if (nr>=0&&nr<9&&nc>=0&&nc<9) {
+        const t=grid.cells[nr][nc].type;
+        if (t==='empty'||t==='adam'||t==='eve') return [sr,sc];
+      }
+    }
+    return [0,0];
+  }
+}
+
+class Grunt extends Enemy {
+  constructor(row,col) { super(row,col,2,1,'grunt','😠','#c0392b'); }
+}
+
+class Serpent extends Enemy {
+  constructor(row,col) { super(row,col,1,1,'serpent','🐍','#e67e22'); }
+  getNextMove(grid) {
+    this.zigzag = (this.zigzag+1)%2;
+    const targets = [{r:4,c:4},{r:4,c:5}];
+    let best = null, bestDist = Infinity;
+    for (const t of targets) {
+      const d = Math.abs(this.row-t.r)+Math.abs(this.col-t.c);
+      if (d < bestDist) { bestDist=d; best=t; }
+    }
+    const dr = best.r-this.row, dc = best.c-this.col;
+    // Alternate axis
+    if (this.zigzag===0) {
+      if (dr!==0) {
+        const nr=this.row+Math.sign(dr);
+        if (grid.cells[nr][this.col].type!=='wall') return [Math.sign(dr),0];
+      }
+      if (dc!==0) {
+        const nc=this.col+Math.sign(dc);
+        if (grid.cells[this.row][nc].type!=='wall') return [0,Math.sign(dc)];
+      }
+    } else {
+      if (dc!==0) {
+        const nc=this.col+Math.sign(dc);
+        if (grid.cells[this.row][nc].type!=='wall') return [0,Math.sign(dc)];
+      }
+      if (dr!==0) {
+        const nr=this.row+Math.sign(dr);
+        if (grid.cells[nr][this.col].type!=='wall') return [Math.sign(dr),0];
+      }
+    }
+    return [0,0];
+  }
+}
+
+class Volant extends Enemy {
+  constructor(row,col) { super(row,col,1,2,'volant','🦅','#8e44ad'); }
+  getNextMove(grid) {
+    // Ignores walls, speed 2 handled by game loop calling twice
+    return this._moveToward(4,4,grid);
+  }
+  _moveToward(tr,tc,grid) {
+    const dr=tr-this.row, dc=tc-this.col;
+    const steps=[];
+    if(Math.abs(dr)>=Math.abs(dc)){
+      if(dr!==0) steps.push([Math.sign(dr),0]);
+      if(dc!==0) steps.push([0,Math.sign(dc)]);
+    } else {
+      if(dc!==0) steps.push([0,Math.sign(dc)]);
+      if(dr!==0) steps.push([Math.sign(dr),0]);
+    }
+    for(const [sr,sc] of steps){
+      const nr=this.row+sr, nc=this.col+sc;
+      if(nr>=0&&nr<9&&nc>=0&&nc<9){
+        const t=grid.cells[nr][nc].type;
+        if(t==='empty'||t==='adam'||t==='eve') return [sr,sc];
+      }
+    }
+    return [0,0];
+  }
+}
+
+// ===================== GRID =====================
+
+class Grid {
+  constructor() {
+    this.cells = Array.from({length:9}, (_,r)=>Array.from({length:9},(_,c)=>({type:'empty',entity:null,row:r,col:c})));
+    this.cells[4][4].type='adam';
+    this.cells[4][5].type='eve';
+  }
+  getEnemy(r,c) {
+    if(r<0||r>8||c<0||c>8) return null;
+    const e=this.cells[r][c].entity;
+    return (e instanceof Enemy)?e:null;
+  }
+  placeEnemy(enemy) {
+    this.cells[enemy.row][enemy.col].entity=enemy;
+  }
+  removeEnemy(enemy) {
+    if(this.cells[enemy.row][enemy.col].entity===enemy)
+      this.cells[enemy.row][enemy.col].entity=null;
+  }
+  moveEntity(r1,c1,r2,c2) {
+    const e=this.cells[r1][c1].entity;
+    this.cells[r1][c1].entity=null;
+    this.cells[r2][c2].entity=e;
+    if(e){e.row=r2;e.col=c2;}
+  }
+}
+
+// ===================== PLAYER =====================
+
+class Player {
+  constructor(mode) {
+    this.mode=mode;
+    this.energy=3;
+    this.maxEnergy=3;
+    this.hand=[];
+    this.deck=[];
+    this.discard=[];
+    this.initDeck();
+  }
+  initDeck() {
+    const base = [new CardFrappe(),new CardFrappe(),new CardFrappe3x3(),new CardPousse(),new CardMur(),new CardBouclier()];
+    if(this.mode==='zeus') base.push(new CardFoudreZeus(), new CardFoudreZeus());
+    this.deck=[...base];
+    this.shuffle(this.deck);
+  }
+  shuffle(arr) {
+    for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
+  }
+  drawCards(n=5) {
+    while(this.hand.length<n){
+      if(this.deck.length===0){
+        if(this.discard.length===0) break;
+        this.deck=[...this.discard]; this.discard=[];
+        this.shuffle(this.deck);
+      }
+      this.hand.push(this.deck.pop());
+    }
+  }
+  discardCard(card) {
+    this.hand=this.hand.filter(c=>c.id!==card.id);
+    this.discard.push(card);
+  }
+  refillEnergy() { this.energy=this.maxEnergy; }
+}
+
+// ===================== GAME =====================
+
+class Game {
+  constructor(mode) {
+    this.mode=mode;
+    this.grid=new Grid();
+    this.player=new Player(mode);
+    this.enemies=[];
+    this.wave=1;
+    this.turn=1;
+    this.phase='player'; // 'player','enemy','reward'
+    this.selectedCard=null;
+    this.shieldActive=0;
+    this.fureur=0;
+    this.gameOver=false;
+    this.logLines=[];
+    this.enemiesOnWave=0;
+    this.totalWaveEnemies=3;
+    this.spawnCooldown=0;
+    this.player.drawCards(5);
+  }
+
+  log(msg, cls='') {
+    this.logLines.push({msg,cls});
+    if(this.logLines.length>8) this.logLines.shift();
+  }
+
+  spawnEnemies() {
+    const count = 1+Math.floor(Math.random()*3)+Math.floor(this.wave/2);
+    const types=['grunt','serpent','volant'];
+    for(let i=0;i<count;i++){
+      const edge=Math.floor(Math.random()*4);
+      let r,c;
+      if(edge===0){r=0;c=Math.floor(Math.random()*9);}
+      else if(edge===1){r=8;c=Math.floor(Math.random()*9);}
+      else if(edge===2){r=Math.floor(Math.random()*9);c=0;}
+      else{r=Math.floor(Math.random()*9);c=8;}
+      // avoid occupied
+      if(this.grid.cells[r][c].type!=='empty'||this.grid.cells[r][c].entity) continue;
+      const t=types[Math.floor(Math.random()*types.length)];
+      let enemy;
+      if(t==='grunt') enemy=new Grunt(r,c);
+      else if(t==='serpent') enemy=new Serpent(r,c);
+      else enemy=new Volant(r,c);
+      this.enemies.push(enemy);
+      this.grid.placeEnemy(enemy);
+      this.enemiesOnWave++;
+    }
+  }
+
+  damageEnemy(enemy, dmg, row, col) {
+    enemy.hp -= dmg;
+    this.spawnDmgPopup(row, col, `-${dmg}`);
+    this.log(`${enemy.symbol} perd ${dmg} PV (reste ${Math.max(0,enemy.hp)}).`, 'dmg');
+    if(enemy.hp<=0) this.killEnemy(enemy);
+  }
+
+  killEnemy(enemy) {
+    this.grid.removeEnemy(enemy);
+    this.enemies=this.enemies.filter(e=>e.id!==enemy.id);
+    this.log(`${enemy.symbol} éliminé!`, 'dmg');
+  }
+
+  spawnDmgPopup(row, col, text) {
+    if(!this._ui) return;
+    this._ui.spawnDmgPopup(row, col, text);
+  }
+
+  endPlayerTurn() {
+    if(this.phase!=='player') return;
+    this.phase='enemy';
+
+    // Zeus: automatic Éclair Divin
+    if(this.mode==='zeus'&&this.enemies.length>0){
+      const target=this.enemies[Math.floor(Math.random()*this.enemies.length)];
+      this.damageEnemy(target,2,target.row,target.col);
+      this.log('⚡ Éclair Divin automatique!','dmg');
+    }
+
+    // Move enemies
+    this.moveEnemies();
+
+    // Check lose
+    if(this.gameOver) return;
+
+    // Decay walls
+    for(let r=0;r<9;r++) for(let c=0;c<9;c++){
+      const cell=this.grid.cells[r][c];
+      if(cell.type==='wall'&&cell.wallTurns!==undefined){
+        cell.wallTurns--;
+        if(cell.wallTurns<=0) cell.type='empty';
+      }
+    }
+
+    // Decay shield
+    if(this.shieldActive>0) this.shieldActive--;
+
+    // Spawn enemies every 2 turns
+    if(this.turn%2===0) this.spawnEnemies();
+
+    // Zeus: gain fureur
+    if(this.mode==='zeus') this.fureur=Math.min(10,this.fureur+1);
+
+    // Check wave clear
+    if(this.enemies.length===0&&this.turn>1){
+      this.phase='reward';
+      this._ui.showReward();
+      return;
+    }
+
+    // Next turn
+    this.turn++;
+    this.phase='player';
+    this.player.refillEnergy();
+    // Discard hand and draw new
+    for(const c of [...this.player.hand]) this.player.discardCard(c);
+    this.player.drawCards(5);
+    this.selectedCard=null;
+  }
+
+  moveEnemies() {
+    // Process by speed
+    const moved = new Set();
+    const processEnemies = () => {
+      for(const enemy of [...this.enemies]){
+        const steps = enemy.speed;
+        for(let s=0;s<steps;s++){
+          if(!this.enemies.includes(enemy)) break;
+          const [dr,dc] = enemy.getNextMove(this.grid);
+          if(dr===0&&dc===0) continue;
+          const nr=enemy.row+dr, nc=enemy.col+dc;
+          if(nr<0||nr>8||nc<0||nc>8) continue;
+          const cell=this.grid.cells[nr][nc];
+          if(cell.type==='adam'||cell.type==='eve'){
+            // Check shield
+            if(this.shieldActive>0){
+              this.killEnemy(enemy);
+              this.log(`🛡 Bouclier détruit ${enemy.symbol}!`,'info');
+              break;
+            } else {
+              this.gameOver=true;
+              this._ui.showGameOver();
+              return;
+            }
+          }
+          if(cell.type==='wall'&&enemy.type!=='volant') continue;
+          // Move
+          this.grid.removeEnemy(enemy);
+          enemy.row=nr; enemy.col=nc;
+          this.grid.placeEnemy(enemy);
+          // Shield adjacents check
+          if(this.shieldActive>0){
+            const cx=4,cy=4;
+            if((nr===cx&&nc===cy)||(nr===cx&&nc===cy+1)||
+               (nr===cx-1&&nc===cy)||(nr===cx-1&&nc===cy+1)||
+               (nr===cx+1&&nc===cy)||(nr===cx+1&&nc===cy+1)||
+               (nr===cx&&nc===cy-1)||(nr===cx&&nc===cy+2)){
+              this.killEnemy(enemy);
+              this.log(`🛡 Bouclier détruit ${enemy.symbol}!`,'info');
+              break;
+            }
+          }
+        }
+        if(this.gameOver) return;
+      }
+    };
+    processEnemies();
+  }
+
+  getGhostMoves() {
+    // For GOD mode: show where each enemy will move next
+    const moves=[];
+    for(const enemy of this.enemies){
+      const [dr,dc]=enemy.getNextMove(this.grid);
+      moves.push({enemy,dr,dc});
+    }
+    return moves;
+  }
+
+  selectCard(card) {
+    if(card.cost>this.player.energy){ this.log('Pas assez d\'énergie!','info'); return; }
+    if(this.phase!=='player') return;
+    this.selectedCard=card;
+    this.log(`Carte sélectionnée: ${card.name}.`,'info');
+    if(card.targetType==='instant'){
+      this.playCard(card,-1,-1);
+    }
+  }
+
+  playCard(card, row, col) {
+    if(card.cost>this.player.energy){ this.log('Pas assez d\'énergie!','info'); return; }
+    const result = card.apply(this, row, col);
+    if(result===false) return;
+    this.player.energy-=card.cost;
+    this.player.discardCard(card);
+    this.selectedCard=null;
+    this._ui.render();
+  }
+
+  addCardToDeck(cardClass) {
+    const newCard = new cardClass();
+    this.player.deck.push(newCard);
+    this.log(`Carte ajoutée au deck: ${newCard.name}!`,'info');
+  }
+}
+
+// ===================== UI MANAGER =====================
+
+class UIManager {
+  constructor(game) {
+    this.game=game;
+    game._ui=this;
+    this.buildGrid();
+    this.bindEvents();
+    this.render();
+  }
+
+  buildGrid() {
+    const gridEl=document.getElementById('grid');
+    gridEl.innerHTML='';
+    for(let r=0;r<9;r++) for(let c=0;c<9;c++){
+      const cell=document.createElement('div');
+      cell.className='cell';
+      cell.dataset.row=r; cell.dataset.col=c;
+      cell.addEventListener('click',()=>this.onCellClick(r,c));
+      gridEl.appendChild(cell);
+    }
+  }
+
+  bindEvents() {
+    document.getElementById('btn-end-turn').addEventListener('click',()=>{
+      if(this.game.phase==='player'){ this.game.endPlayerTurn(); this.render(); }
+    });
+  }
+
+  getCellEl(r,c) {
+    return document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+  }
+
+  onCellClick(r,c) {
+    const g=this.game;
+    if(g.phase!=='player'||!g.selectedCard) return;
+    const card=g.selectedCard;
+    if(card.targetType==='instant') return;
+    if(card.targetType==='enemy'&&!g.grid.getEnemy(r,c)){
+      g.log('Cible invalide: pas d\'ennemi ici!','info'); this.render(); return;
+    }
+    if(card.targetType==='empty'&&g.grid.cells[r][c].type!=='empty'){
+      g.log('Cible invalide: cellule non vide!','info'); this.render(); return;
+    }
+    g.playCard(card, r, c);
+    this.render();
+  }
+
+  render() {
+    const g=this.game;
+    if(g.gameOver) return;
+
+    // Top bar
+    document.getElementById('wave-num').textContent=g.wave;
+    document.getElementById('turn-num').textContent=g.turn;
+    document.getElementById('enemy-count').textContent=g.enemies.length;
+
+    // Status
+    const statusEl=document.getElementById('status-msg');
+    if(g.phase==='enemy') statusEl.textContent='⏳ Les ennemis avancent...';
+    else if(g.selectedCard) statusEl.textContent=`🎯 Clic sur la grille pour: ${g.selectedCard.name}`;
+    else statusEl.textContent='';
+
+    // Energy
+    const pipsEl=document.getElementById('energy-pips');
+    pipsEl.innerHTML='';
+    for(let i=0;i<g.player.maxEnergy;i++){
+      const pip=document.createElement('div');
+      pip.className='pip'+(i<g.player.energy?' active':'');
+      pipsEl.appendChild(pip);
+    }
+    document.getElementById('energy-val').textContent=g.player.energy;
+
+    // Fureur
+    if(g.mode==='zeus'){
+      document.getElementById('fureur-section').style.display='block';
+      document.getElementById('fureur-val').textContent=g.fureur;
+      document.getElementById('fureur-bar').style.width=(g.fureur/10*100)+'%';
+    }
+
+    // Deck
+    document.getElementById('deck-count').textContent=g.player.deck.length;
+    document.getElementById('discard-count').textContent=g.player.discard.length;
+
+    // Grid
+    const ghostMoves = g.mode==='god' ? g.getGhostMoves() : [];
+    const ghostMap = {};
+    for(const m of ghostMoves) ghostMap[`${m.enemy.row},${m.enemy.col}`]={dr:m.dr,dc:m.dc};
+
+    for(let r=0;r<9;r++) for(let c=0;c<9;c++){
+      const cell=g.grid.cells[r][c];
+      const el=this.getCellEl(r,c);
+      el.className='cell';
+      el.innerHTML='';
+
+      // Shield glow for center area
+      const isCenter=(r>=3&&r<=5&&c>=3&&c<=6);
+      if(g.shieldActive>0&&isCenter) el.classList.add('shielded');
+
+      if(cell.type==='adam'){
+        el.classList.add('adam'); el.textContent='👨';
+      } else if(cell.type==='eve'){
+        el.classList.add('eve'); el.textContent='👩';
+      } else if(cell.type==='wall'){
+        el.classList.add('wall'); el.textContent='🧱';
+        if(cell.wallTurns!==undefined){
+          const lbl=document.createElement('div');
+          lbl.className='hp-label'; lbl.textContent=cell.wallTurns;
+          el.appendChild(lbl);
+        }
+      } else {
+        el.classList.add('empty');
+      }
+
+      // Enemy on cell
+      const enemy=g.grid.getEnemy(r,c);
+      if(enemy){
+        el.style.background=enemy.color+'55';
+        el.style.border=`2px solid ${enemy.color}`;
+        el.textContent=enemy.symbol;
+        const hp=document.createElement('div');
+        hp.className='hp-label'; hp.textContent=enemy.hp+'/'+enemy.maxHp;
+        el.appendChild(hp);
+        // Ghost arrow (GOD mode)
+        if(ghostMap[`${r},${c}`]){
+          const {dr,dc}=ghostMap[`${r},${c}`];
+          const arr=document.createElement('div');
+          arr.className='arrow-label';
+          if(dr===-1&&dc===0) arr.textContent='↑';
+          else if(dr===1&&dc===0) arr.textContent='↓';
+          else if(dr===0&&dc===-1) arr.textContent='←';
+          else if(dr===0&&dc===1) arr.textContent='→';
+          else arr.textContent='·';
+          el.appendChild(arr);
+        }
+      } else {
+        el.style.background='';
+        el.style.border='';
+      }
+
+      // Highlight selected target cells
+      if(g.selectedCard){
+        const sc=g.selectedCard;
+        if(sc.targetType==='enemy'&&enemy) el.classList.add('valid-target');
+        if(sc.targetType==='empty'&&cell.type==='empty'&&!enemy) el.classList.add('valid-target');
+        if(sc.targetType==='cell') el.classList.add('valid-target');
+      }
+    }
+
+    // Hand
+    this.renderHand();
+
+    // Log
+    const logEl=document.getElementById('action-log');
+    logEl.innerHTML=g.logLines.map(l=>`<div class="log-line ${l.cls}">${l.msg}</div>`).join('');
+    logEl.scrollTop=logEl.scrollHeight;
+
+    // Card info
+    const infoEl=document.getElementById('card-info');
+    if(g.selectedCard) infoEl.textContent=`${g.selectedCard.icon} ${g.selectedCard.name}: ${g.selectedCard.desc}`;
+    else infoEl.textContent='Sélectionne une carte';
+  }
+
+  renderHand() {
+    const g=this.game;
+    const handEl=document.getElementById('hand-row');
+    handEl.innerHTML='';
+    for(const card of g.player.hand){
+      const el=document.createElement('div');
+      el.className='card';
+      const canAfford=card.cost<=g.player.energy&&g.phase==='player';
+      if(!canAfford) el.classList.add('unaffordable');
+      if(g.selectedCard&&g.selectedCard.id===card.id) el.classList.add('selected');
+      el.innerHTML=`
+        <div class="card-cost">${card.cost}</div>
+        <div class="card-name">${card.name}</div>
+        <div class="card-icon">${card.icon}</div>
+        <div class="card-desc">${card.desc}</div>
+      `;
+      el.addEventListener('click',()=>{ if(canAfford) g.selectCard(card); this.render(); });
+      handEl.appendChild(el);
+    }
+  }
+
+  spawnDmgPopup(row, col, text) {
+    const el=this.getCellEl(row,col);
+    if(!el) return;
+    const rect=el.getBoundingClientRect();
+    const popup=document.createElement('div');
+    popup.className='dmg-popup';
+    popup.textContent=text;
+    popup.style.left=(rect.left+rect.width/2-16)+'px';
+    popup.style.top=(rect.top+4)+'px';
+    document.body.appendChild(popup);
+    setTimeout(()=>popup.remove(),900);
+  }
+
+  showGameOver() {
+    const overlay=document.getElementById('overlay');
+    document.getElementById('overlay-title').textContent='💀 GAME OVER';
+    document.getElementById('overlay-msg').textContent=
+      `Un ennemi a atteint Adam ou Ève! Tu as survécu jusqu'à la vague ${this.game.wave}, tour ${this.game.turn}.`;
+    document.getElementById('reward-area').innerHTML='';
+    document.getElementById('overlay-btns').innerHTML=
+      '<button class="overlay-btn" id="btn-restart">↩ Recommencer</button>';
+    overlay.style.display='flex';
+    document.getElementById('btn-restart').addEventListener('click',()=>location.reload());
+  }
+
+  showReward() {
+    this.render();
+    const g=this.game;
+    g.wave++;
+    const overlay=document.getElementById('overlay');
+    document.getElementById('overlay-title').textContent=`🏆 Vague ${g.wave-1} Terminée!`;
+    document.getElementById('overlay-msg').textContent='Choisis une nouvelle carte pour ton deck:';
+
+    // Pick 2 random card types
+    const pool=[CardFrappe,CardFrappe3x3,CardPousse,CardMur,CardBouclier];
+    if(g.mode==='zeus') pool.push(CardFoudreZeus);
+    const shuffled=[...pool].sort(()=>Math.random()-0.5);
+    const choices=[new shuffled[0](), new shuffled[1]()];
+
+    const rewardArea=document.getElementById('reward-area');
+    rewardArea.innerHTML='';
+    const row=document.createElement('div');
+    row.className='reward-cards';
+    for(const card of choices){
+      const el=document.createElement('div');
+      el.className='reward-card';
+      el.innerHTML=`<div class="r-icon">${card.icon}</div><div class="r-name">${card.name} (${card.cost}⚡)</div><div class="r-desc">${card.desc}</div>`;
+      el.addEventListener('click',()=>{
+        g.addCardToDeck(card.constructor);
+        overlay.style.display='none';
+        this.startNextWave();
+      });
+      row.appendChild(el);
+    }
+    rewardArea.appendChild(row);
+
+    const btnsEl=document.getElementById('overlay-btns');
+    btnsEl.innerHTML='<button class="overlay-btn" id="btn-skip-reward">Passer</button>';
+    document.getElementById('btn-skip-reward').addEventListener('click',()=>{
+      overlay.style.display='none';
+      this.startNextWave();
+    });
+
+    overlay.style.display='flex';
+  }
+
+  startNextWave() {
+    const g=this.game;
+    g.phase='player';
+    g.turn++;
+    g.player.refillEnergy();
+    for(const c of [...g.player.hand]) g.player.discardCard(c);
+    g.player.drawCards(5);
+    g.selectedCard=null;
+    // Spawn initial enemies for new wave
+    g.spawnEnemies();
+    this.render();
+  }
+}
+
+// ===================== INIT =====================
+
+function startGame(mode) {
+  document.getElementById('start-screen').style.display='none';
+  document.getElementById('game-screen').style.display='flex';
+  document.getElementById('game-screen').style.flexDirection='column';
+
+  const badgeArea=document.getElementById('god-badge-area');
+  if(mode==='god'){
+    badgeArea.innerHTML='<span class="god-badge">🌿 MODE DIEU</span>';
+  } else {
+    badgeArea.innerHTML='<span class="zeus-badge">⚡ MODE ZEUS</span>';
+  }
+
+  const game=new Game(mode);
+  // Spawn initial enemies
+  game.spawnEnemies();
+  const ui=new UIManager(game);
+  ui.render();
+}
+
+document.getElementById('btn-god').addEventListener('click',()=>startGame('god'));
+document.getElementById('btn-zeus').addEventListener('click',()=>startGame('zeus'));
+</script>
+</body>
+</html>
